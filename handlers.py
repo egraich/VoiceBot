@@ -69,7 +69,7 @@ async def handle_media(message: Message, bot: Bot):
             success = await services.extract_audio(input_file_path, audio_file_path)
             if not success:
                 raise RuntimeError("Ошибка при извлечении аудио через FFmpeg")
-            target_audio_path = audio_file_path # Отправлять в Groq будем извлеченный звук
+            target_audio_path = audio_file_path
             
         
         transcription_text = await services.transcribe_audio(target_audio_path)
