@@ -54,16 +54,22 @@ async def handle_media(message: Message, bot: Bot):
     status_msg = await message.reply(config.UI.PROCESSING, parse_mode="HTML")
     
     unique_id = str(uuid.uuid4())
-    input_file_path = os.path.join(config.TEMP_DIR, f"input_{unique_id}")
-    audio_file_path = os.path.join(config.TEMP_DIR, f"audio_{unique_id}.mp3")
+    input_file_path = None
+    audio_file_path = None
     
     try:
+        file_info = await bot.get_file(file_id)
+        _, ext = os.path.splitext(file_info.file_path)
+        if not ext:
+            ext = ".ogg" if message.voice else ".mp4"
+
+        input_file_path = os.path.join(config.TEMP_DIR, f"input_{unique_id}{ext}")
+        audio_file_path = os.path.join(config.TEMP_DIR, f"audio_{unique_id}.flac")
         
         logger.info(f"Скачиваем файл {file_id} от пользователя {message.from_user.id}")
-        await bot.download(file=file_id, destination=input_file_path)
+        await bot.download(file=file_info, destination=input_file_path)
         
         target_audio_path = input_file_path
-        
         
         if is_video:
             success = await services.extract_audio(input_file_path, audio_file_path)
@@ -71,14 +77,11 @@ async def handle_media(message: Message, bot: Bot):
                 raise RuntimeError("Ошибка при извлечении аудио через FFmpeg")
             target_audio_path = audio_file_path
             
-        
         transcription_text = await services.transcribe_audio(target_audio_path)
         
         if transcription_text:
-            
             cache_key = f"{status_msg.chat.id}:{status_msg.message_id}"
             TRANSCRIPTIONS_CACHE[cache_key] = transcription_text
-            
             
             await status_msg.edit_text(
                 text=config.UI.SUCCESS_TITLE,
@@ -86,7 +89,6 @@ async def handle_media(message: Message, bot: Bot):
                 reply_markup=keyboards.get_show_text_kb(status_msg.message_id)
             )
         else:
-            
             await status_msg.edit_text(config.UI.ERROR_GENERIC)
 
     except Exception as e:
@@ -94,10 +96,9 @@ async def handle_media(message: Message, bot: Bot):
         await status_msg.edit_text(config.UI.ERROR_GENERIC)
         
     finally:
-        
-        if os.path.exists(input_file_path):
+        if input_file_path and os.path.exists(input_file_path):
             os.remove(input_file_path)
-        if os.path.exists(audio_file_path):
+        if audio_file_path and os.path.exists(audio_file_path):
             os.remove(audio_file_path)
         logger.info(f"Временные файлы для {unique_id} удалены.")
 
@@ -109,7 +110,6 @@ async def process_show_text(callback: CallbackQuery):
     
     text = TRANSCRIPTIONS_CACHE.get(cache_key)
     if text:
-        
         full_message = f"{text}"
         await callback.message.edit_text(
             text=full_message,
