@@ -1,9 +1,10 @@
 import os
 import uuid
+import time
 import logging
 from aiogram import Router, Bot, F
-from aiogram.types import Message, CallbackQuery
-from aiogram.filters import CommandStart
+from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.filters import CommandStart, Command
 
 import config
 import services
@@ -15,29 +16,47 @@ logger = logging.getLogger(__name__)
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    """Handle incoming /start commands."""
+    """Handle incoming start commands."""
     await message.answer(config.UI.START_MESSAGE, parse_mode="HTML")
+
+@router.message(Command("db"), F.chat.type == "private", F.from_user.id == config.ADMIN_ID)
+async def cmd_send_db(message: Message) -> None:
+    """Deliver database file to the authorized administrator."""
+    if os.path.exists(config.DB_PATH):
+        await message.answer_document(FSInputFile(config.DB_PATH))
+    else:
+        await message.answer(config.UI.DB_NOT_FOUND)
 
 @router.message(F.voice | F.video | F.video_note | F.document)
 async def handle_media(message: Message, bot: Bot) -> None:
-    """Main handler to catch and process incoming media files."""
+    """Download, convert and transcribe incoming media files."""
     file_id = None
     is_video = False
+    file_type = ""
+    duration = 0
     
     if message.voice:
         file_id = message.voice.file_id
         file_size = message.voice.file_size
+        file_type = "voice"
+        duration = message.voice.duration
     elif message.video_note:
         file_id = message.video_note.file_id
         file_size = message.video_note.file_size
+        file_type = "video_note"
+        duration = message.video_note.duration
         is_video = True
     elif message.video:
         file_id = message.video.file_id
         file_size = message.video.file_size
+        file_type = "video"
+        duration = message.video.duration
         is_video = True
     elif message.document and message.document.mime_type and message.document.mime_type.startswith('video/'):
         file_id = message.document.file_id
         file_size = message.document.file_size
+        file_type = "document"
+        duration = 0
         is_video = True
     else:
         return
@@ -76,11 +95,26 @@ async def handle_media(message: Message, bot: Bot) -> None:
                 raise RuntimeError("Audio extraction process failed")
             target_audio_path = audio_file_path
             
+        start_time = time.time()
         transcription_text = await services.transcribe_audio(target_audio_path)
+        processing_time = round(time.time() - start_time, 2)
         
         if transcription_text:
             cache_key = f"{status_msg.chat.id}_{status_msg.message_id}"
             await database.save_transcription(cache_key, transcription_text)
+            
+            username = message.from_user.username
+            user_display = f"@{username}" if username else message.from_user.first_name
+            
+            rounded_size_mb = round(file_size / (1024 * 1024), 2)
+            
+            await database.save_stats(
+                file_type=file_type,
+                duration=duration,
+                username=user_display,
+                file_size=rounded_size_mb,
+                processing_time=processing_time
+            )
             
             await status_msg.edit_text(
                 text=config.UI.SUCCESS_TITLE,
@@ -103,7 +137,7 @@ async def handle_media(message: Message, bot: Bot) -> None:
 
 @router.callback_query(F.data.startswith("show_"))
 async def process_show_text(callback: CallbackQuery) -> None:
-    """Handle callback for showing text payload."""
+    """Display transcription text."""
     msg_id = callback.data.split("_")[1]
     cache_key = f"{callback.message.chat.id}_{msg_id}"
     
@@ -120,7 +154,7 @@ async def process_show_text(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("hide_"))
 async def process_hide_text(callback: CallbackQuery) -> None:
-    """Handle callback for hiding text payload."""
+    """Hide transcription text."""
     msg_id = callback.data.split("_")[1]
     
     await callback.message.edit_text(

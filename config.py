@@ -34,6 +34,7 @@ class UI:
     BTN_SHOW = "Показать текст"
     BTN_HIDE = "Скрыть текст"
     ERR_NOT_FOUND = "Текст не найден (возможно бот был перезагружен)."
+    DB_NOT_FOUND = "Файл базы данных не найден."
 
 def setup_logging() -> None:
     """Configure application logging system."""
