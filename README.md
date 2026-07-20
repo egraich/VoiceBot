@@ -14,10 +14,10 @@ Send or forward any voice message, video note, audio track, or document to [@egv
 
 ## Features
 
+* Supports voice messages alongside any video file format.
 * Uses Groq `whisper-large-v3` for speech-to-text processing.
 * Interactive inline show/hide buttons for output text.
 * Supports files up to 2GB via local Telegram Bot API server integration.
-* Logs performance metrics and caches transcriptions in SQLite.
 
 ---
 
@@ -38,9 +38,9 @@ Send or forward any voice message, video note, audio track, or document to [@egv
 
 2. Create a `.env` file inside `VoiceBot/`:
    ```env
-   BOT_TOKEN=yout_telegram_bot_token
+   BOT_TOKEN=your_telegram_bot_token
    GROQ_API_KEY=gsk_your_groq_api_key_here
-   ADMIN_ID=your(admin)_id
+   ADMIN_ID=your_admin_id
    TEMP_DIR=path/to/temp/files/directory
    BOT_API_URL=https://api.telegram.org
    ```
