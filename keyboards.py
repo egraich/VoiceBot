@@ -3,9 +3,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import config
 
 def get_show_text_kb(message_id: int) -> InlineKeyboardMarkup:
-    """
-    Render a inline button "show text".
-    """
+    """Render an inline button to show the hidden text."""
     builder = InlineKeyboardBuilder()
     builder.add(
         InlineKeyboardButton(
@@ -16,9 +14,7 @@ def get_show_text_kb(message_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 def get_hide_text_kb(message_id: int) -> InlineKeyboardMarkup:
-    """
-    Render a inline button "hide text".
-    """
+    """Render an inline button to hide the displayed text."""
     builder = InlineKeyboardBuilder()
     builder.add(
         InlineKeyboardButton(
