@@ -27,7 +27,7 @@ async def cmd_send_db(message: Message) -> None:
     else:
         await message.answer(config.UI.DB_NOT_FOUND)
 
-@router.message(F.voice | F.video | F.video_note | F.document)
+@router.message(F.voice | F.video | F.video_note | F.audio | F.document)
 async def handle_media(message: Message, bot: Bot) -> None:
     """Download, convert and transcribe incoming media files."""
     file_id = None
@@ -52,13 +52,20 @@ async def handle_media(message: Message, bot: Bot) -> None:
         file_type = "video"
         duration = message.video.duration
         is_video = True
-    elif message.document and message.document.mime_type and message.document.mime_type.startswith('video/'):
-        file_id = message.document.file_id
-        file_size = message.document.file_size
-        file_type = "document"
-        duration = 0
-        is_video = True
-    else:
+    elif message.audio:
+        file_id = message.audio.file_id
+        file_size = message.audio.file_size
+        file_type = "audio"
+        duration = message.audio.duration
+    elif message.document and message.document.mime_type:
+        mime = message.document.mime_type
+        if mime.startswith('video/') or mime.startswith('audio/'):
+            file_id = message.document.file_id
+            file_size = message.document.file_size
+            file_type = "document"
+            is_video = mime.startswith('video/')
+    
+    if not file_id:
         return
 
     if file_size and file_size > config.MAX_FILE_SIZE_BYTES:
@@ -79,7 +86,7 @@ async def handle_media(message: Message, bot: Bot) -> None:
         if ext == ".oga" or message.voice:
             ext = ".ogg"
         elif not ext:
-            ext = ".mp4"
+            ext = ".mp4" if is_video else ".mp3"
 
         input_file_path = os.path.join(config.TEMP_DIR, f"input_{unique_id}{ext}")
         audio_file_path = os.path.join(config.TEMP_DIR, f"audio_{unique_id}.flac")
@@ -87,6 +94,9 @@ async def handle_media(message: Message, bot: Bot) -> None:
         logger.info(f"Downloading file {file_id} from user {message.from_user.id}")
         await bot.download(file=file_info, destination=input_file_path)
         
+        if duration == 0:
+            duration = await services.get_duration(input_file_path)
+            
         target_audio_path = input_file_path
         
         if is_video:

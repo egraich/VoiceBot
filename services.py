@@ -33,6 +33,22 @@ async def extract_audio(input_path: str, output_path: str) -> bool:
         logger.error(f"FFmpeg execution exception: {e}")
         return False
 
+async def get_duration(file_path: str) -> int:
+    """Read the duration of any downloaded media file with ffprobe."""
+    try:
+        process = await asyncio.create_subprocess_exec(
+            'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1', file_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL
+        )
+        stdout, _ = await process.communicate()
+        if process.returncode == 0:
+            return int(float(stdout.decode().strip()))
+    except Exception as e:
+        logger.error(f"Failed to extract file duration: {e}")
+    return 0
+
 async def transcribe_audio(audio_path: str) -> str | None:
     """Send audio to Groq API and return the parsed response."""
     logger.info(f"Sending audio file to Groq API: {audio_path}")
