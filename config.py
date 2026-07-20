@@ -6,11 +6,12 @@ load_dotenv(override=True)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
 
 if not BOT_TOKEN or not GROQ_API_KEY:
     raise ValueError("Missing credentials in .env file")
 
-MAX_FILE_SIZE_MB = 20
+MAX_FILE_SIZE_MB = 2000
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 GROQ_MODEL = "whisper-large-v3"
 
@@ -35,7 +36,7 @@ class UI:
     ERR_NOT_FOUND = "Текст не найден (возможно бот был перезагружен)."
 
 def setup_logging() -> None:
-    """Configure application logging system with proper formatting."""
+    """Configure application logging system."""
     log_format = "[%(asctime)s] %(levelname)s [%(filename)s:%(lineno)d] %(message)s"
     date_format = "%Y-%m-%d %H:%M:%S"
     
