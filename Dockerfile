@@ -1,4 +1,4 @@
-FROM mwader/static-ffmpeg:7.1.0 AS ffmpeg
+FROM mwader/static-ffmpeg:7.1 AS ffmpeg
 
 FROM python:3.11-slim
 
