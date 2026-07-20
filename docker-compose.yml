@@ -10,7 +10,7 @@ services:
     env_file:
       - ../.env
     volumes:
-      - /root/projects/sharing/tg-voicebot:/root/projects/sharing/tg-voicebot
+      - /root/projects/sharing/tg-voicebot:/var/lib/telegram-bot-api
       - /root/projects/bots/voicebot/voice_stats.db:/app/voice_stats.db
     networks:
       - voicenet
