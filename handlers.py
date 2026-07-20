@@ -8,24 +8,19 @@ from aiogram.filters import CommandStart
 import config
 import services
 import keyboards
+import database
 
 router = Router()
 logger = logging.getLogger(__name__)
 
-TRANSCRIPTIONS_CACHE = {}
-
-os.makedirs(config.TEMP_DIR, exist_ok=True)
-
 @router.message(CommandStart())
-async def cmd_start(message: Message):
-    """Handles /start message."""
+async def cmd_start(message: Message) -> None:
+    """Handle incoming /start commands."""
     await message.answer(config.UI.START_MESSAGE, parse_mode="HTML")
 
 @router.message(F.voice | F.video | F.video_note | F.document)
-async def handle_media(message: Message, bot: Bot):
-    """
-    Main handler. Catch media files.
-    """
+async def handle_media(message: Message, bot: Bot) -> None:
+    """Main handler to catch and process incoming media files."""
     file_id = None
     is_video = False
     
@@ -70,7 +65,7 @@ async def handle_media(message: Message, bot: Bot):
         input_file_path = os.path.join(config.TEMP_DIR, f"input_{unique_id}{ext}")
         audio_file_path = os.path.join(config.TEMP_DIR, f"audio_{unique_id}.flac")
         
-        logger.info(f"Скачиваем файл {file_id} от пользователя {message.from_user.id}")
+        logger.info(f"Downloading file {file_id} from user {message.from_user.id}")
         await bot.download(file=file_info, destination=input_file_path)
         
         target_audio_path = input_file_path
@@ -78,14 +73,14 @@ async def handle_media(message: Message, bot: Bot):
         if is_video:
             success = await services.extract_audio(input_file_path, audio_file_path)
             if not success:
-                raise RuntimeError("Ошибка при извлечении аудио через FFmpeg")
+                raise RuntimeError("Audio extraction process failed")
             target_audio_path = audio_file_path
             
         transcription_text = await services.transcribe_audio(target_audio_path)
         
         if transcription_text:
-            cache_key = f"{status_msg.chat.id}:{status_msg.message_id}"
-            TRANSCRIPTIONS_CACHE[cache_key] = transcription_text
+            cache_key = f"{status_msg.chat.id}_{status_msg.message_id}"
+            await database.save_transcription(cache_key, transcription_text)
             
             await status_msg.edit_text(
                 text=config.UI.SUCCESS_TITLE,
@@ -96,7 +91,7 @@ async def handle_media(message: Message, bot: Bot):
             await status_msg.edit_text(config.UI.ERROR_GENERIC)
 
     except Exception as e:
-        logger.error(f"Сбой при обработке медиа: {e}", exc_info=True)
+        logger.error(f"Media processing failed: {e}", exc_info=True)
         await status_msg.edit_text(config.UI.ERROR_GENERIC)
         
     finally:
@@ -104,35 +99,34 @@ async def handle_media(message: Message, bot: Bot):
             os.remove(input_file_path)
         if audio_file_path and os.path.exists(audio_file_path):
             os.remove(audio_file_path)
-        logger.info(f"Временные файлы для {unique_id} удалены.")
+        logger.info(f"Temporary workspace cleared for {unique_id}.")
 
 @router.callback_query(F.data.startswith("show_"))
-async def process_show_text(callback: CallbackQuery):
-    """Обрабатывает нажатие на кнопку [Показать текст]."""
+async def process_show_text(callback: CallbackQuery) -> None:
+    """Handle callback for showing text payload."""
     msg_id = callback.data.split("_")[1]
-    cache_key = f"{callback.message.chat.id}:{msg_id}"
+    cache_key = f"{callback.message.chat.id}_{msg_id}"
     
-    text = TRANSCRIPTIONS_CACHE.get(cache_key)
+    text = await database.get_transcription(cache_key)
     if text:
-        full_message = f"{text}"
         await callback.message.edit_text(
-            text=full_message,
-            reply_markup=keyboards.get_hide_text_kb(msg_id)
+            text=text,
+            reply_markup=keyboards.get_hide_text_kb(int(msg_id))
         )
     else:
-        await callback.answer("Текст не найден (возможно бот был перезагружен).", show_alert=True)
+        await callback.answer(config.UI.ERR_NOT_FOUND, show_alert=True)
     
     await callback.answer()
 
 @router.callback_query(F.data.startswith("hide_"))
-async def process_hide_text(callback: CallbackQuery):
-    """Обрабатывает нажатие на кнопку [Скрыть текст]."""
+async def process_hide_text(callback: CallbackQuery) -> None:
+    """Handle callback for hiding text payload."""
     msg_id = callback.data.split("_")[1]
     
     await callback.message.edit_text(
         text=config.UI.SUCCESS_TITLE,
         parse_mode="HTML",
-        reply_markup=keyboards.get_show_text_kb(msg_id)
+        reply_markup=keyboards.get_show_text_kb(int(msg_id))
     )
     
     await callback.answer()
