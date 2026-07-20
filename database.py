@@ -6,9 +6,9 @@ async def init_db() -> None:
     async with aiosqlite.connect(config.DB_PATH) as db:
         await db.execute("PRAGMA journal_mode=WAL")
         await db.execute('''
-            CREATE TABLE IF NOT EXISTS BUTTON_CASHE(
-                msg_key TEXT PRIMARY KEY
-                text TEXT NOT NULL
+            CREATE TABLE IF NOT EXISTS BUTTON_CACHE(
+                msg_key TEXT PRIMARY KEY,
+                text TEXT NOT NULL,
                 TIME TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
