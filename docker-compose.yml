@@ -17,3 +17,4 @@ services:
 
 networks:
   voicenet:
+    external: true
