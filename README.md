@@ -2,7 +2,7 @@
 
 Telegram bot that transcribes voice messages, video notes, audio files, and music into text using Groq's Whisper API.
 
-![VoiceBot Preview](<img width="1481" height="1014" alt="image" src="https://github.com/user-attachments/assets/9f2c64b5-be70-43c9-b375-e4f4c77427e1" />)
+<img width="1481" height="1014" alt="image" src="https://github.com/user-attachments/assets/9f2c64b5-be70-43c9-b375-e4f4c77427e1" />
 
 [Try VoiceBot on Telegram](https://t.me/egvoicebot)
 
