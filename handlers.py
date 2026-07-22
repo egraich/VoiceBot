@@ -1,5 +1,4 @@
 import os
-import uuid
 import time
 import logging
 import asyncio
@@ -116,7 +115,7 @@ async def handle_media(message: Message, bot: Bot) -> None:
     status_msg = await message.reply(config.UI.PROCESSING, parse_mode="HTML")
     
     async with get_semaphore():
-        unique_id = str(uuid.uuid4())
+        msg_key = f"{message.chat.id}_{message.message_id}"
         input_file_path = None
         audio_file_path = None
         
@@ -130,8 +129,8 @@ async def handle_media(message: Message, bot: Bot) -> None:
             elif not ext:
                 ext = ".mp4" if is_video else ".mp3"
 
-            input_file_path = os.path.join(config.TEMP_DIR, f"input_{unique_id}{ext}")
-            audio_file_path = os.path.join(config.TEMP_DIR, f"audio_{unique_id}.flac")
+            input_file_path = os.path.join(config.TEMP_DIR, f"input_{msg_key}{ext}")
+            audio_file_path = os.path.join(config.TEMP_DIR, f"audio_{msg_key}.flac")
             
             logger.info(f"Downloading file {file_id} from user {message.from_user.id}")
             await bot.download(file=file_info, destination=input_file_path)
@@ -192,7 +191,7 @@ async def handle_media(message: Message, bot: Bot) -> None:
                 os.remove(input_file_path)
             if audio_file_path and os.path.exists(audio_file_path):
                 os.remove(audio_file_path)
-            logger.info(f"Temporary workspace cleared for {unique_id}.")
+            logger.info(f"Temporary workspace cleared for {msg_key}.")
 
 @router.callback_query(F.data.startswith("show_"))
 async def process_show_text(callback: CallbackQuery) -> None:

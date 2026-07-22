@@ -68,7 +68,7 @@ async def transcribe_audio(audio_path: str) -> str | None:
     try:
         with open(audio_path, "rb") as file:
             transcription = await groq_client.audio.transcriptions.create(
-                file=(os.path.basename(audio_path), file.read()),
+                file=(os.path.basename(audio_path), file),
                 model=config.GROQ_MODEL,
                 response_format="json",
                 temperature=0.0
