@@ -21,9 +21,14 @@ async def init_db() -> None:
                 username TEXT NOT NULL,
                 file_size REAL NOT NULL,
                 processing_time REAL NOT NULL,
+                output TEXT,
                 TIME TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        try:
+            await db.execute("ALTER TABLE BOT_STATS ADD COLUMN output TEXT")
+        except Exception:
+            pass
         await db.commit()
 
 async def save_transcription(msg_key: str, text: str) -> None:
@@ -41,14 +46,15 @@ async def save_stats(
     duration: int, 
     username: str, 
     file_size: float, 
-    processing_time: float
+    processing_time: float,
+    output: str
 ) -> None:
     """Log performance metrics and metadata."""
     async with aiosqlite.connect(config.DB_PATH) as db:
         await db.execute('''
-            INSERT INTO BOT_STATS (user_id, file_type, duration, username, file_size, processing_time)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (user_id, file_type, duration, username, file_size, processing_time))
+            INSERT INTO BOT_STATS (user_id, file_type, duration, username, file_size, processing_time, output)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, file_type, duration, username, file_size, processing_time, output))
         await db.commit()
 
 async def get_user_today_duration(user_id: int) -> int:

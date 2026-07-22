@@ -159,7 +159,7 @@ async def handle_media(message: Message, bot: Bot) -> None:
                     duration=duration,
                     username=user_display,
                     file_size=rounded_size_mb,
-                    processing_time=processing_time
+                    output=transcription_text
                 )
                 
                 is_private = message.chat.type == "private"
