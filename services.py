@@ -4,7 +4,10 @@ import logging
 from groq import AsyncGroq
 import config
 
-groq_client = AsyncGroq(api_key=config.GROQ_API_KEY)
+groq_client = AsyncGroq(
+    api_key=config.GROQ_API_KEY,
+    timeout=60.0
+)
 logger = logging.getLogger(__name__)
 
 async def extract_audio(input_path: str, output_path: str) -> bool:
